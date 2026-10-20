@@ -1,0 +1,98 @@
+{
+  "skill_name": "test-challenge",
+  "evals": [
+    {
+      "id": 1,
+      "name": "go-handler-field-mapping",
+      "prompt": "Review the tests in evals/fixtures/1-go-handler/user_handler_test.go. Are they worth keeping?",
+      "files": [
+        "evals/fixtures/1-go-handler/user_handler.go",
+        "evals/fixtures/1-go-handler/user_handler_test.go"
+      ],
+      "expected_output": "All 12 TestToUserDTO_* tests DELETE (transport, trivial mapping). MISSING: 1–2 handler contract tests for GET /users/{id} via httptest with a fake UserService, pinning the JSON field names (incl. avatar_url, created_at) and the 400 / 404 / 500 error mapping.",
+      "assertions": [
+        "Every one of the 12 TestToUserDTO_* tests is verdict DELETE",
+        "No test gets KEEP",
+        "Suggests 1 or 2 handler-level contract tests (not 12) with a Go sketch using httptest and a fake service",
+        "The contract test asserts the wire JSON (literal, JSONEq or golden file), not individual struct fields",
+        "Covers status mapping for invalid id / not found",
+        "Ends with a net line counting 12 removed and 1–2 added",
+        "Every verdict line carries a [P1]-[P4] tag"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "rust-mockall-query-builder",
+      "prompt": "Challenge the tests in evals/fixtures/2-rust-repo/src/orders.rs.",
+      "files": [
+        "evals/fixtures/2-rust-repo/src/orders.rs"
+      ],
+      "expected_output": "All mockall tests are DELETE or CONVERT; none KEEP. get_uses_id_query and search_by_customer_adds_clause DELETE (trivial CRUD / SQL-string asserts). search_overdue and all-filters and mark_paid_once CONVERT to integration tests in tests/ against Postgres via testcontainers-modules or #[sqlx::test], asserting returned rows: the LEFT JOIN/IS NULL unpaid logic, NULLS LAST ordering, status ANY, and ON CONFLICT DO NOTHING idempotency.",
+      "assertions": [
+        "No mockall-based test is KEEP",
+        "Explains that asserting SQL text/mock calls tests the mock, not the query",
+        "The trivial get-by-id query gets no replacement test",
+        "At least the overdue/unpaid search and the ON CONFLICT upsert become integration tests against a real Postgres",
+        "Replacement sketch lives in tests/ (integration) and uses testcontainers-modules or #[sqlx::test]",
+        "Replacement asserts on returned rows/state, not on SQL strings or call counts",
+        "Every verdict line carries a [P1]-[P4] tag"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "trivial-utils",
+      "prompt": "Should these tests stay? evals/fixtures/3-utils/utils_test.go",
+      "files": [
+        "evals/fixtures/3-utils/utils.go",
+        "evals/fixtures/3-utils/utils_test.go"
+      ],
+      "expected_output": "All 5 tests DELETE: FilterActive, FindByID, IsEmpty are trivial quadrant. No MISSING. Net −5.",
+      "assertions": [
+        "All five tests are DELETE",
+        "Reason cites the trivial quadrant / restating the code",
+        "No hedging such as 'it depends' without a named concrete reason",
+        "Does not propose replacement tests",
+        "Net line shows 5 removed, 0 added",
+        "Every verdict line carries a [P1]-[P4] tag"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "pricing-rules-under-tested",
+      "prompt": "Is the test coverage in evals/fixtures/4-pricing/pricing.rs enough?",
+      "files": [
+        "evals/fixtures/4-pricing/pricing.rs"
+      ],
+      "expected_output": "PricingService::quote needs an InMemoryPromos fake of the promo store → Overcomplicated: recommend extracting a pure pricing function that takes the subtotal lines, customer, the already-loaded promo and `now` as values. quote_happy_path KEEP [P1] or CONVERT to that pure function. MISSING (on the pure function) for each rule edge: subtotal exactly 100_000 vs 100_001 (strict >), blocked customer above threshold, loyalty_years 2 vs 3, expired promo, discount cap at 15%, stacking; plus `p.expired()` reading the clock → MISSING refactor to inject now. Unknown-promo lookup stays in the shell. Hardcoded expected values, pillar tag on every verdict.",
+      "assertions": [
+        "quote_happy_path is KEEP or CONVERT (to the extracted pure function), never DELETE",
+        "Classifies quote as Overcomplicated because testing it needs a promo-store fake, and recommends a pure function taking the promo as a value",
+        "MISSING includes the threshold boundary (100_000 vs above)",
+        "MISSING includes the blocked-customer rule",
+        "MISSING includes the 15% cap",
+        "Flags the expired-promo check's clock as something to inject as a value",
+        "Every verdict line carries a [P1]-[P4] tag",
+        "Sketches use hardcoded expected values and no mockall"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "plan-new-endpoint",
+      "prompt": "Write tests for this new endpoint: evals/fixtures/5-new-endpoint/transfer.go",
+      "files": [
+        "evals/fixtures/5-new-endpoint/transfer.go"
+      ],
+      "expected_output": "Plan first. Service.Transfer mixes the decision with repo calls → Overcomplicated: recommend extracting a pure decision (amount, from, to, source Account, limit → Status or error) and unit-testing it: non-positive amount, same account, frozen, insufficient funds incl. overdraft boundary, limit → pending_review boundary. The service becomes a shell: one happy-path integration test on real Postgres (testcontainers-go) per the integration budget, plus idempotent replay if not unit-reachable. Handler: 1 contract test (201 body; error-code mapping table). PgRepo.ApplyTransfer: integration tests for the conditional debit / rollback / concurrency; no tests for GetAccount / FindByIdemKey.",
+      "assertions": [
+        "Produces a plan that classifies handler, service and repo before any test code",
+        "Recommends extracting the transfer decision into a pure function and puts the unit tests there, not on the service with a fake repo",
+        "Pure-function cases include the overdraft boundary and the review-limit boundary",
+        "Service gets one happy-path integration test against real Postgres, not unit tests",
+        "Handler gets at most 2 contract tests, covering error-code mapping",
+        "Repo integration tests only for ApplyTransfer (transaction / conditional update), via testcontainers-go",
+        "Explicitly says GetAccount and FindByIdemKey get no tests",
+        "No interaction-count assertions on the repo; every verdict carries a pillar tag"
+      ]
+    }
+  ]
+}
